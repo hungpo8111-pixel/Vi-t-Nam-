@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tool By Đường Vĩ</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      font-family: 'Courier New', monospace;
+      color: #0f0;
+      height: 100vh;
+      position: relative;
+    }
+
+    /* Nền ban đầu hiển thị */
+    #custom-background {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -2;
+      background: #1a1a1a url('https://i.ibb.co/rrbzbBP/hinh-nen-la-co-viet-nam-1-ca26a98511.jpg') no-repeat center center/cover;
+    }
+
+    canvas#matrix, canvas#particles {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+    }
+
+    #ui {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+      height: 100%;
+    }
+
+    .terminal {
+      background: rgba(0, 0, 0, 0.8);
+      border: 2px solid #0f0;
+      border-radius: 10px;
+      padding: 15px;
+      max-width: 480px;
+      width: 85%;
+      box-shadow: 0 0 20px rgba(0, 255, 0, 0.5);
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      box-sizing: border-box;
+    }
+
+    .title {
+      font-size: 1.1em;
+      font-weight: bold;
+      color: #0f0;
+      text-transform: uppercase;
+      margin-bottom: 5px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .line {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .prompt {
+      font-size: 1em;
+      color: #0f0;
+      white-space: nowrap;
+    }
+
+    input#pw {
+      background: #111;
+      border: 1px solid #0f0;
+      color: #0f0;
+      font-family: 'Courier New', monospace;
+      padding: 6px;
+      width: 180px;
+      max-width: 100%;
+      border-radius: 3px;
+      outline: none;
+      box-sizing: border-box;
+    }
+
+    input#pw::placeholder {
+      color: #0f03;
+    }
+
+    button#go {
+      background: #0f0;
+      color: #000;
+      border: none;
+      padding: 6px 12px;
+      font-family: 'Courier New', monospace;
+      font-weight: bold;
+      border-radius: 3px;
+      cursor: pointer;
+      transition: background 0.3s;
+      box-sizing: border-box;
+    }
+
+    button#go:hover {
+      background: #0c0;
+    }
+
+    .blink {
+      width: 8px;
+      height: 16px;
+      background: #0f0;
+      animation: blink 1s step-end infinite;
+    }
+
+    @keyframes blink {
+      50% { opacity: 0; }
+    }
+
+    .hint {
+      font-size: 0.8em;
+      color: #0f0;
+      opacity: 0.8;
+      margin-top: 5px;
+    }
+
+    #center-note {
+      position: absolute;
+      bottom: 15px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: #0f0;
+      font-size: 0.8em;
+      text-align: center;
+      z-index: 1;
+      opacity: 0.7;
+      white-space: nowrap;
+    }
+
+    /* Hiệu ứng đếm ngược trên nền đen */
+    #countdown {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 120px;
+      color: #00ffff;
+      z-index: 11;
+      text-shadow: 0 0 10px #0ff, 0 0 20px #0ff, 0 0 30px #0ff;
+      background: #000; /* Nền đen */
+      width: 100%;
+      height: 100%;
+      display: none; /* Ẩn ban đầu */
+      justify-content: center;
+      align-items: center;
+    }
+
+    #countdown.visible {
+      display: flex; /* Hiển thị khi có class visible */
+    }
+
+    /* Hiệu ứng fade-out cho terminal và center-note */
+    .hidden {
+      opacity: 0;
+      transition: opacity 1.5s ease-out;
+    }
+
+    @media (max-width: 480px) {
+      .terminal {
+        padding: 12px;
+        width: 90%;
+      }
+
+      .title {
+        font-size: 0.9em;
+      }
+
+      .prompt {
+        font-size: 0.9em;
+      }
+
+      input#pw {
+        width: 140px;
+        padding: 4px;
+      }
+
+      button#go {
+        padding: 4px 10px;
+      }
+
+      .hint {
+        font-size: 0.7em;
+      }
+
+      #center-note {
+        font-size: 0.7em;
+        bottom: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Nền hiển thị ban đầu -->
+  <div id="custom-background"></div>
+
+  <!-- Star background và particle hiển thị ban đầu -->
+  <canvas id="matrix"></canvas>
+  <canvas id="particles"></canvas>
+
+  <!-- Terminal UI -->
+  <div id="ui">
+    <div class="terminal" id="panel">
+      <div class="title">> Tool By Đường Vĩ 🇻🇳 — 2/9 QUỐC KHÁNH VIỆT NAM 🇻🇳</div>
+      <div class="line">
+        <div class="prompt">MẬT KHẨU🇻🇳</div>
+        <input id="pw" placeholder="Ví dụ: 2-9-1945 hoặc 2/9/1945" autocomplete="off" />
+        <button id="go">MỞ KHÓA</button>
+        <span class="blink" id="cursorBlink"></span>
+      </div>
+      <div class="hint">Nhập đúng mật khẩu để kích hoạt trình diễn pixel. (Chấp nhận: <strong>2-9-1945</strong>, <strong>2/9/1945</strong>, <strong>02/09/1945</strong>)</div>
+    </div>
+  </div>
+
+  <div id="center-note">Nhập mật khẩu để bắt đầu — Các tương tác khác bị khóa</div>
+  <div id="countdown">3</div> <!-- Phần đếm ngược trên nền đen -->
+
+  <script>
+    /* ---------- Utility & Password Handling ---------- */
+    const ACCEPT = new Set(['2-9-1945', '2/9/1945', '02/09/1945', '02-09-1945']);
+    function normalize(v) { return v.trim(); }
+    function isPasswordOk(v) { return ACCEPT.has(normalize(v)); }
+
+    /* ---------- STAR BACKGROUND ---------- */
+    const mat = document.getElementById('matrix');
+    const mctx = mat.getContext('2d');
+    let MW = mat.width = innerWidth, MH = mat.height = innerHeight;
+    window.addEventListener('resize', () => {
+      MW = mat.width = innerWidth;
+      MH = mat.height = innerHeight;
+      initMatrix();
+      recomputeTargets();
+    });
+
+    const density = 0.025;
+    let stars = [];
+    function initMatrix() {
+      stars = [];
+      const cols = Math.floor(MW * density);
+      for (let i = 0; i < cols; i++) {
+        stars.push({
+          x: Math.random() * MW,
+          y: Math.random() * MH,
+          speed: 0.4 + Math.random() * 1.5,
+          size: 8 + Math.random() * 8,
+          opacity: 0.4 + Math.random() * 0.6
+        });
+      }
+    }
+    function drawMatrix() {
+      mctx.fillStyle = 'rgba(0,0,0,0.08)';
+      mctx.fillRect(0, 0, MW, MH);
+      mctx.font = '18px monospace';
+      mctx.textAlign = 'center';
+      mctx.textBaseline = 'middle';
+      for (const s of stars) {
+        mctx.fillStyle = `rgba(255,215,0,${s.opacity})`;
+        mctx.fillText('VIỆT NAM🇻🇳', s.x, s.y);
+        s.y += s.speed;
+        if (s.y > MH + s.size) s.y = -s.size;
+      }
+    }
+    initMatrix();
+    function animateMatrix() {
+      drawMatrix();
+      requestAnimationFrame(animateMatrix);
+    }
+    animateMatrix(); // Bắt đầu animation ngay từ đầu
+
+    /* ---------- PARTICLE SYSTEM ---------- */
+    const cvs = document.getElementById('particles');
+    const ctx = cvs.getContext('2d');
+    let W = cvs.width = innerWidth, H = cvs.height = innerHeight;
+
+    class Particle {
+      constructor(x = 0, y = 0, color = 'rgba(255,215,0,1)') {
+        this.x = Math.random() * W;
+        this.y = Math.random() * H;
+        this.vx = (Math.random() - 0.5) * 4;
+        this.vy = (Math.random() - 0.5) * 4;
+        this.tx = x;
+        this.ty = y;
+        this.s = 2 + Math.random() * 1;
+        this.color = color;
+        this.locked = false;
+        this.baseX = x;
+        this.baseY = y;
+      }
+      setTarget(x, y, c) {
+        this.tx = x + (Math.random() - 0.5) * 3;
+        this.ty = y + (Math.random() - 0.5) * 3;
+        this.baseX = this.tx;
+        this.baseY = this.ty;
+        if (c) this.color = c;
+      }
+      update(dt) {
+        if (this.locked) {
+          const time = performance.now() * 0.001;
+          const waveX = Math.sin(time + this.baseX * 0.02) * 5;
+          const waveY = Math.cos(time + this.baseY * 0.02) * 3;
+          this.x = this.baseX + waveX;
+          this.y = this.baseY + waveY;
+        } else {
+          const k = 0.16;
+          this.vx += (this.tx - this.x) * k * dt * 60;
+          this.vy += (this.ty - this.y) * k * dt * 60;
+          this.vx *= 0.9;
+          this.vy *= 0.9;
+          this.x += this.vx * dt * 60;
+          this.y += this.vy * dt * 60;
+        }
+      }
+      draw(ctx) {
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.s / 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    let particles = [];
+    function ensureParticles(n) {
+      if (!particles || particles.length < n) {
+        particles = [];
+        for (let i = 0; i < n; i++) particles.push(new Particle());
+      }
+    }
+
+    /* ---------- FLAG TARGET GENERATION ---------- */
+    let flagTargets = [];
+    function recomputeTargets() {
+      flagTargets = [];
+      const fw = Math.floor(Math.min(W * 0.5, 680));
+      const fh = Math.floor(fw * 0.6);
+      const off = document.createElement('canvas'); off.width = fw; off.height = fh;
+      const g = off.getContext('2d');
+      g.fillStyle = '#FF0000'; g.fillRect(0, 0, fw, fh);
+      const cx = fw / 2, cy = fh / 2, R = fh * 0.28, r = R * 0.38;
+      g.fillStyle = '#FFFF00';
+      g.beginPath();
+      for (let i = 0; i < 5; i++) {
+        const angle = (i * 2 * Math.PI) / 5 - Math.PI / 2;
+        const x1 = cx + Math.cos(angle) * R;
+        const y1 = cy + Math.sin(angle) * R;
+        const x2 = cx + Math.cos(angle + Math.PI / 5) * r;
+        const y2 = cy + Math.sin(angle + Math.PI / 5) * r;
+        if (i === 0) g.moveTo(x1, y1);
+        else g.lineTo(x1, y1);
+        g.lineTo(x2, y2);
+      }
+      g.closePath();
+      g.fill();
+      const data = g.getImageData(0, 0, fw, fh).data;
+      const step = 3;
+      for (let y = 0; y < fh; y += step) {
+        for (let x = 0; x < fw; x += step) {
+          const idx = (y * fw + x) * 4;
+          if (data[idx + 3] > 128) {
+            const rx = x - fw / 2 + W / 2;
+            const ry = y - fh / 2 + H / 2;
+            const col = `rgba(${data[idx]},${data[idx + 1]},${data[idx + 2]},1)`;
+            flagTargets.push({ x: rx, y: ry, color: col });
+          }
+        }
+      }
+    }
+
+    /* ---------- Assign Targets ---------- */
+    function assignTargetsToParticles(targets) {
+      ensureParticles(targets.length);
+      for (let i = 0; i < particles.length; i++) {
+        const t = targets[i % targets.length];
+        particles[i].setTarget(t.x, t.y, t.color);
+      }
+    }
+
+    /* ---------- Sequence control ---------- */
+    const FORM_FLAG_MS = 3000;
+    const HOLD_FLAG_MS = 5000;
+
+    let seqStage = 'idle';
+    let stageStart = 0;
+
+    /* ---------- Unlock UI logic ---------- */
+    const goBtn = document.getElementById('go');
+    const pwEl = document.getElementById('pw');
+    const panel = document.getElementById('panel');
+    const ui = document.getElementById('ui');
+    const centerNote = document.getElementById('center-note');
+    const countdown = document.getElementById('countdown');
+    const background = document.getElementById('custom-background');
+    const matrix = document.getElementById('matrix');
+    const particlesCanvas = document.getElementById('particles');
+
+    function clearUIandHide() {
+      panel.classList.add('hidden');
+      centerNote.classList.add('hidden');
+      // Ẩn tất cả hiệu ứng, chuyển sang nền đen
+      background.style.display = 'none';
+      matrix.style.display = 'none';
+      particlesCanvas.style.display = 'none';
+      startCountdown();
+    }
+
+    function shakePanel() {
+      panel.classList.add('shake');
+      setTimeout(() => panel.classList.remove('shake'), 380);
+    }
+
+    pwEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') attemptUnlock();
+    });
+    goBtn.addEventListener('click', attemptUnlock);
+
+    function attemptUnlock() {
+      const v = pwEl.value.trim();
+      if (isPasswordOk(v)) {
+        clearUIandHide();
+      } else {
+        shakePanel();
+        pwEl.value = '';
+        pwEl.focus();
+      }
+    }
+
+    function startCountdown() {
+      let count = 3;
+      countdown.textContent = count;
+      countdown.classList.add('visible'); // Hiển thị đếm ngược trên nền đen
+
+      const interval = setInterval(() => {
+        setTimeout(() => {
+          count--;
+          if (count > 0) {
+            countdown.textContent = count;
+          } else {
+            clearInterval(interval);
+            countdown.classList.remove('visible'); // Ẩn đếm ngược
+            // Bật lại hiệu ứng và hình thành lá cờ
+            background.style.display = 'block';
+            matrix.style.display = 'block';
+            particlesCanvas.style.display = 'block';
+            animateMatrix(); // Khởi động lại animation nền
+            startShowSequence();
+            requestAnimationFrame(step); // Đảm bảo animation particle chạy
+          }
+        }, 500); // Delay 0.5s để tạo hiệu ứng mượt
+      }, 1000); // Đếm mỗi 1 giây
+    }
+
+    /* ---------- Animation loop ---------- */
+    let last = performance.now();
+
+    function startShowSequence() {
+      recomputeTargets();
+      assignTargetsToParticles(flagTargets);
+      for (const p of particles) {
+        p.x = Math.random() * W;
+        p.y = Math.random() * H * 1.2 - H * 0.2;
+        p.vx = (Math.random() - 0.5) * 4;
+        p.vy = (Math.random() - 0.5) * 4;
+      }
+      seqStage = 'formingFlag';
+      stageStart = performance.now();
+    }
+
+    function step(now) {
+      const dt = Math.min(0.033, (now - last) / 1000);
+      last = now;
+      ctx.clearRect(0, 0, W, H);
+
+      if (seqStage === 'formingFlag') {
+        const t = now - stageStart;
+        if (t >= FORM_FLAG_MS) {
+          seqStage = 'holdFlag';
+          stageStart = now;
+          for (const p of particles) {
+            p.locked = true;
+            p.x = p.tx;
+            p.y = p.ty;
+            p.vx = p.vy = 0;
+          }
+        }
+      }
+
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
+        if (seqStage === 'idle') {
+          p.vx += Math.sin(i + now * 0.001) * 0.001;
+          p.vy += Math.cos(i + now * 0.001) * 0.001;
+          p.x += p.vx * dt * 60;
+          p.y += p.vy * dt * 60;
+          if (p.x < -10) p.x = W + 10;
+          if (p.x > W + 10) p.x = -10;
+          if (p.y < -10) p.y = H + 10;
+          if (p.y > H + 10) p.y = -10;
+        } else if (seqStage === 'formingFlag') {
+          p.update(dt);
+        } else if (seqStage === 'holdFlag') {
+          p.update(dt);
+        }
+        p.draw(ctx);
+      }
+
+      requestAnimationFrame(step);
+    }
+
+    /* ---------- Initialize on load ---------- */
+    function initParticlesIfNeeded() {
+      ensureParticles(1200);
+      for (const p of particles) {
+        p.tx = Math.random() * W;
+        p.ty = Math.random() * H;
+        p.color = 'rgba(0,255,106,0.9)';
+      }
+    }
+    initParticlesIfNeeded();
+
+    /* ---------- Focus input on load ---------- */
+    window.addEventListener('load', () => { pwEl.focus(); });
+  </script>
+</body>
+</html>
